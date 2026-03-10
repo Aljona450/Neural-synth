@@ -2,78 +2,58 @@
 <html lang="et">
 <head>
     <meta charset="UTF-8">
-    <title>Neural-Synth Final</title>
+    <title>Neural-Synth Controls</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
     <style>
-        body { margin: 0; background: #fff0f5; overflow: hidden; }
-        #ui { position: absolute; top: 20px; left: 20px; color: #d87093; font-family: sans-serif; pointer-events: none; }
+        body { margin: 0; background: #ffb6c1; font-family: sans-serif; }
+        .controls { position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 5px; }
+        button { padding: 10px; cursor: pointer; background: white; border: 1px solid #d87093; border-radius: 5px; color: #d87093; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <b>Neural-Synth v2.0</b><br>
-        [Mouse] Draw | [C] Clear | [S] Save | [Space] Gravity
+    <div class="controls">
+        <button onclick="testFeature('pitch')">1. Pitch-on-Y</button>
+        <button onclick="testFeature('color')">2. Color-Instrument</button>
+        <button onclick="testFeature('clear')">Clear Canvas</button>
     </div>
 
 <script>
-/* 1-10: Полная реализация задания */
-let osc, env, fft;
-let lines = [], gravityPoints = [];
+    let osc, started = false;
+    let mode = '';
 
-function setup() {
-    createCanvas(windowWidth, windowHeight);
-    colorMode(HSB, 360, 100, 100, 1);
-    osc = new p5.Oscillator('triangle');
-    env = new p5.Envelope(0.1, 0.5, 0.1, 0.2);
-    osc.amp(env);
-    osc.start();
-    fft = new p5.FFT();
-}
-
-function draw() {
-    // 3. Echo Trails & 10. Background Vibe
-    background(330, 20, 100, 0.1); 
-    
-    // Отрисовка Гравитации (5)
-    gravityPoints.forEach(p => { ellipse(p.x, p.y, 20); });
-
-    // Отрисовка линий (7. Waveform Brush)
-    for (let i = lines.length - 1; i >= 0; i--) {
-        lines[i].display();
-        if (lines[i].alpha < 0) lines.splice(i, 1);
+    function setup() {
+        createCanvas(windowWidth, windowHeight);
+        background(255, 182, 193);
     }
-}
 
-function mouseDragged() {
-    userStartAudio();
-    // 1. Pitch-on-Y, 4. Speed-Volume
-    osc.freq(map(mouseY, height, 0, 100, 800));
-    env.setRange(map(dist(mouseX, mouseY, pmouseX, pmouseY), 0, 50, 0, 0.5), 0);
-    env.play();
-
-    // 2. All Colors (X-axis), 6. Symmetry (Mirror Y)
-    let hue = map(mouseX, 0, width, 0, 360);
-    lines.push(new Path(mouseX, mouseY, pmouseX, pmouseY, hue));
-    lines.push(new Path(width - mouseX, height - mouseY, width - pmouseX, height - pmouseY, hue));
-}
-
-class Path {
-    constructor(x, y, px, py, h) {
-        this.x = x; this.y = y; this.px = px; this.py = py; this.h = h; this.alpha = 255;
+    function draw() {
+        if (mode === 'color') {
+            stroke(map(mouseX, 0, width, 0, 360), 100, 100);
+            strokeWeight(5);
+            if (mouseIsPressed) line(pmouseX, pmouseY, mouseX, mouseY);
+        } else {
+            fill(255);
+            ellipse(mouseX, mouseY, 20, 20);
+        }
     }
-    display() {
-        stroke(this.h, 80, 90, this.alpha -= 2);
-        strokeWeight(5);
-        line(this.x + sin(frameCount*0.2)*5, this.y, this.px, this.py);
-    }
-}
 
-function keyPressed() {
-    if (key == 'c') background('#fff0f5'); // 9. Clear
-    if (key == 's') save('art.png');       // 8. Record
-    if (key == ' ') gravityPoints.push({x: mouseX, y: mouseY}); // 5. Gravity
-}
+    function testFeature(feature) {
+        mode = feature;
+        if (feature === 'pitch' && !started) {
+            osc = new p5.Oscillator('sine');
+            osc.start();
+            started = true;
+        }
+        if (feature === 'clear') background(255, 182, 193);
+    }
+
+    function mouseMoved() {
+        if (mode === 'pitch' && started) {
+            let freq = map(mouseY, height, 0, 100, 800);
+            osc.freq(freq);
+        }
+    }
 </script>
 </body>
 </html>
