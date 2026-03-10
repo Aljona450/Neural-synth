@@ -2,80 +2,75 @@
 <html lang="et">
 <head>
     <meta charset="UTF-8">
-    <title>Neural-Synth Final</title>
+    <title>Neural-Synth Controls</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
     <style>
-        body { margin: 0; background: #fff0f5; overflow: hidden; }
-        #ui { position: absolute; top: 20px; left: 20px; color: #d87093; font-family: sans-serif; pointer-events: none; }
+        body { margin: 0; background: #fff0f5; font-family: sans-serif; }
+        .grid { display: grid; grid-template-columns: repeat(2, 150px); gap: 10px; padding: 20px; }
+        button { padding: 10px; cursor: pointer; background: white; border: 1px solid #d87093; border-radius: 5px; color: #d87093; font-size: 12px; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <b>Neural-Synth v2.0</b><br>
-        [Mouse] Draw | [C] Clear | [S] Save | [Space] Gravity
+    <div class="grid">
+        <button onclick="setMode('pitch')">1. Pitch-on-Y</button>
+        <button onclick="setMode('color')">2. Color-Spectrum</button>
+        <button onclick="setMode('echo')">3. Echo Trails</button>
+        <button onclick="setMode('volume')">4. Speed-Volume</button>
+        <button onclick="setMode('gravity')">5. Gravity Loops</button>
+        <button onclick="setMode('mirror')">6. Symmetry Mode</button>
+        <button onclick="setMode('wave')">7. Wave Brush</button>
+        <button onclick="saveArt()">8. Save/Record</button>
+        <button onclick="clearCanvas()">9. Clear Screen</button>
+        <button onclick="setMode('vibe')">10. Vibe Mode</button>
     </div>
 
 <script>
-/* 1-10: Полная реализация задания */
-let osc, env;
-let lines = [], gravityPoints = [];
+    let mode = 'vibe', osc, env;
+    let lines = [], gravityPoints = [];
 
-function setup() {
-    createCanvas(windowWidth, windowHeight);
-    colorMode(HSB, 360, 100, 100, 1);
-    osc = new p5.Oscillator('triangle');
-    env = new p5.Envelope(0.05, 0.5, 0.1, 0.1);
-    osc.amp(env);
-    osc.start();
-}
-
-function draw() {
-    // 3. Echo Trails & 10. Background Vibe
-    background(330, 20, 100, 0.08); 
-    
-    // 5. Gravity Loops
-    gravityPoints.forEach(p => { 
-        stroke(0, 0, 80); noFill();
-        ellipse(p.x, p.y, 40 + sin(frameCount*0.1)*10); 
-    });
-
-    // 7. Waveform Brush & 8. Record/Loop
-    for (let i = lines.length - 1; i >= 0; i--) {
-        lines[i].display();
-        if (lines[i].alpha < 0) lines.splice(i, 1);
+    function setup() {
+        createCanvas(windowWidth, windowHeight);
+        colorMode(HSB, 360, 100, 100, 1);
+        osc = new p5.Oscillator('triangle');
+        env = new p5.Envelope(0.1, 0.5, 0.1, 0.2);
+        osc.amp(env); osc.start();
     }
-}
 
-function mouseDragged() {
-    userStartAudio();
-    // 1. Pitch-on-Y & 4. Speed-Volume
-    osc.freq(map(mouseY, height, 0, 100, 800));
-    env.setRange(map(dist(mouseX, mouseY, pmouseX, pmouseY), 0, 50, 0, 0.8), 0);
-    env.play();
+    function draw() {
+        if (mode === 'echo') background(330, 20, 100, 0.1);
+        else if (mode === 'vibe') background(330, 20, 100, 0.05);
 
-    // 2. All Colors & 6. Symmetry
-    let hue = map(mouseX, 0, width, 0, 360);
-    lines.push(new Path(mouseX, mouseY, pmouseX, pmouseY, hue));
-    lines.push(new Path(width - mouseX, height - mouseY, width - pmouseX, height - pmouseY, hue));
-}
-
-class Path {
-    constructor(x, y, px, py, h) {
-        this.x = x; this.y = y; this.px = px; this.py = py; this.h = h; this.alpha = 255;
+        gravityPoints.forEach(p => ellipse(p.x, p.y, 20));
+        lines.forEach(l => l.display());
     }
-    display() {
-        stroke(this.h, 80, 90, this.alpha -= 3);
-        strokeWeight(5);
-        line(this.x + sin(frameCount*0.5)*5, this.y, this.px, this.py);
-    }
-}
 
-function keyPressed() {
-    if (key == 'c' || key == 'C') background('#fff0f5'); // 9. Clear
-    if (key == 's' || key == 'S') save('NeuralSynth.png'); // 8. Save
-    if (key == ' ') gravityPoints.push({x: mouseX, y: mouseY}); // 5. Gravity
-}
+    function mouseDragged() {
+        userStartAudio();
+        let h = (mode === 'color') ? map(mouseX, 0, width, 0, 360) : 330;
+        let speed = (mode === 'volume') ? dist(mouseX, mouseY, pmouseX, pmouseY) : 0.2;
+        
+        if (mode === 'pitch') osc.freq(map(mouseY, height, 0, 100, 800));
+        
+        lines.push(new Path(mouseX, mouseY, pmouseX, pmouseY, h, speed));
+        if (mode === 'mirror') lines.push(new Path(width-mouseX, height-mouseY, width-pmouseX, height-pmouseY, h, speed));
+        
+        if (mode === 'volume') env.play();
+    }
+
+    class Path {
+        constructor(x, y, px, py, h, s) { this.x=x; this.y=y; this.px=px; this.py=py; this.h=h; this.alpha=255; }
+        display() {
+            stroke(this.h, 80, 90, this.alpha -= 2);
+            let offset = (mode === 'wave') ? sin(frameCount*0.2)*20 : 0;
+            line(this.x + offset, this.y, this.px, this.py);
+        }
+    }
+
+    function setMode(m) { mode = m; }
+    function saveArt() { save('art.png'); }
+    function clearCanvas() { background('#fff0f5'); lines = []; }
+    function keyPressed() { if (key === ' ') gravityPoints.push({x: mouseX, y: mouseY}); }
 </script>
 </body>
 </html>
